@@ -1,27 +1,26 @@
 'use client'
 
-import { useDashboard } from '@/lib/queries/useDashboard'
-import { useDateStore } from '@/lib/store/useDateStore'
-import MobileShell from '@/components/layout/MobileShell'
-import PageHeader from '@/components/layout/PageHeader'
-import NetCalorieBanner from '@/components/dashboard/NetCalorieBanner'
-import MacroRings from '@/components/dashboard/MacroRings'
-import CoachInsightCard from '@/components/dashboard/CoachInsightCard'
-import TodayWorkoutCard from '@/components/dashboard/TodayWorkoutCard'
+import { useDashboard }    from '@/lib/queries/useDashboard'
+import { useDateStore }    from '@/lib/store/useDateStore'
+import MobileShell         from '@/components/layout/MobileShell'
+import PageHeader          from '@/components/layout/PageHeader'
+import NetCalorieBanner    from '@/components/dashboard/NetCalorieBanner'
+import MacroRings          from '@/components/dashboard/MacroRings'
+import CoachInsightCard    from '@/components/dashboard/CoachInsightCard'
+import TodayWorkoutCard    from '@/components/dashboard/TodayWorkoutCard'
 import SupplementChecklist from '@/components/dashboard/SupplementChecklist'
-import WaterTracker from '@/components/dashboard/WaterTracker'
-import WeekStreak from '@/components/dashboard/WeekStreak'
-import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton'
-import { Bot } from 'lucide-react'
-import api from '@/lib/api'
-import { useQueryClient } from '@tanstack/react-query'
+import WaterTracker        from '@/components/dashboard/WaterTracker'
+import WeekStreak          from '@/components/dashboard/WeekStreak'
+import DashboardSkeleton   from '@/components/dashboard/DashboardSkeleton'
+import api                 from '@/lib/api'
+import { useQueryClient }  from '@tanstack/react-query'
 import { useLogSupplement } from '@/lib/queries/useRecovery'
 
 export default function TodayPage() {
-  const { selectedDate } = useDateStore()
-  const { data, isLoading, error } = useDashboard(selectedDate)
-  const queryClient = useQueryClient()
-  const logSupplement = useLogSupplement()
+  const { selectedDate }                       = useDateStore()
+  const { data, isLoading, error, refetch }    = useDashboard(selectedDate)
+  const queryClient                            = useQueryClient()
+  const logSupplement                          = useLogSupplement()
 
   const handleWaterUpdate = async (glasses: number) => {
     try {
@@ -38,7 +37,7 @@ export default function TodayPage() {
     try {
       await logSupplement.mutateAsync({
         supplementId: supplement.supplementId,
-        date: selectedDate,
+        date:         selectedDate,
         taken,
       })
       queryClient.invalidateQueries({ queryKey: ['dashboard', selectedDate] })
@@ -47,6 +46,7 @@ export default function TodayPage() {
     }
   }
 
+  // loading state
   if (isLoading) {
     return (
       <MobileShell>
@@ -56,15 +56,24 @@ export default function TodayPage() {
     )
   }
 
+  // error state — cold start friendly
   if (error || !data) {
     return (
       <MobileShell>
         <PageHeader showDateNav />
-        <div className="flex flex-col items-center justify-center h-64 gap-3">
-          <p className="text-gray-400 text-[14px]">Could not load dashboard</p>
+        <div className="flex flex-col items-center justify-center h-64 gap-3 px-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
+            <span className="text-[28px]">⏳</span>
+          </div>
+          <div>
+            <p className="text-gray-800 text-[15px] font-semibold">Waking up server...</p>
+            <p className="text-gray-400 text-[13px] mt-1 leading-relaxed">
+              First load takes 30–60 seconds on free hosting. Please wait or tap retry.
+            </p>
+          </div>
           <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['dashboard'] })}
-            className="text-[13px] text-[#1D9E75] font-medium"
+            onClick={() => refetch()}
+            className="mt-1 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-[13px] font-semibold active:scale-95 transition-transform"
           >
             Retry
           </button>
@@ -77,6 +86,7 @@ export default function TodayPage() {
 
   return (
     <MobileShell>
+
       {/* header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-1">
         <div>
@@ -113,7 +123,7 @@ export default function TodayPage() {
         />
       </div>
 
-      {/* water + supplements side by side */}
+      {/* water + supplements */}
       <div className="mx-4 mt-3 grid grid-cols-1 gap-3">
         <WaterTracker
           glasses={today.water.glasses}
@@ -139,19 +149,20 @@ export default function TodayPage() {
       <div className="mx-4 mt-3 mb-4 grid grid-cols-2 gap-2">
         {[
           { label: 'Avg net kcal', value: weeklyStats.avgNetKcal.toLocaleString() },
-          { label: 'Avg protein', value: `${weeklyStats.avgProtein}g` },
-          { label: 'Avg burned', value: `${weeklyStats.avgBurned} kcal` },
+          { label: 'Avg protein',  value: `${weeklyStats.avgProtein}g`             },
+          { label: 'Avg burned',   value: `${weeklyStats.avgBurned} kcal`          },
           { label: 'Gym sessions', value: `${weeklyStats.gymSessions}/${weeklyStats.targetSessions}` },
         ].map(({ label, value }) => (
           <div
             key={label}
-            className="bg-white rounded-2xl border border-black/6 p-3 shadow-sm"
+            className="bg-white rounded-2xl border border-black/[0.06] p-3 shadow-sm"
           >
             <div className="text-[11px] text-gray-400 mb-1">{label}</div>
             <div className="text-[18px] font-bold text-gray-900">{value}</div>
           </div>
         ))}
       </div>
+
     </MobileShell>
   )
 }
